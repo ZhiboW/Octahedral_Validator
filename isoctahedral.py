@@ -3,7 +3,7 @@ import numpy as np
 import re
 import rdkit.Chem
 
-def isoctahedral(mol):
+def min_angle(mol):
     coordlist = metal_neighbor_coords(mol)
     distances = []
     for i in range(len(coordlist)):
@@ -41,21 +41,26 @@ def metal_neighbor_coords(mol, metal = "Ir", conformer_index = 0):
                     coordlist.append([point.x - center.x, point.y - center.y, point.z - center.z])
                     indices_seen.add(neighbor_index)
     return coordlist
+
+# Boolean function based on an arbitrary cutoff for angle
+def isoctahedral(mol):
+    return min_angle(mol) > 70
     
-with open(sys.argv[1], "r") as sdf_file:
-    print("loading sdf src")
-    sdf_text = sdf_file.read()
-    sdf_list = sdf_text.split("$$$$\n")
-    print("extracting names")
-    with rdkit.Chem.rdmolfiles.SDWriter("trainset.sdf") as sdf:
-        sdf.SetKekulize(False)
-        for i in sdf_list[:-1]:
-            name = i.strip().split()[0].strip()
-            mol = rdkit.Chem.rdmolfiles.MolFromMolBlock(i, sanitize=False)
-            if "Ir" in [i.GetSymbol() for i in mol.GetAtoms()]:
-                print(name, isoctahedral(mol), sep = ",")
-                if isoctahedral(mol) < 70:
-                    continue
-            else:
-                print(name, "NA", sep = ",")
-            sdf.write(mol)
+if __name__ == "__main__":
+    with open(sys.argv[1], "r") as sdf_file:
+        print("loading sdf src")
+        sdf_text = sdf_file.read()
+        sdf_list = sdf_text.split("$$$$\n")
+        print("extracting names")
+        with rdkit.Chem.rdmolfiles.SDWriter("trainset.sdf") as sdf:
+            sdf.SetKekulize(False)
+            for i in sdf_list[:-1]:
+                name = i.strip().split()[0].strip()
+                mol = rdkit.Chem.rdmolfiles.MolFromMolBlock(i, sanitize=False)
+                if "Ir" in [i.GetSymbol() for i in mol.GetAtoms()]:
+                    print(name, isoctahedral(mol), sep = ",")
+                    if isoctahedral(mol):
+                        continue
+                else:
+                    print(name, "NA", sep = ",")
+                sdf.write(mol)
